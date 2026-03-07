@@ -18,5 +18,8 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Dependencies (if you add Node later)
+# Dependencies
 node_modules/
+
+# Vite
+dist/
