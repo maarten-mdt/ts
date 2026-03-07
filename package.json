@@ -1,0 +1,12 @@
+{
+  "name": "tacticalshack",
+  "version": "0.0.1",
+  "description": "Future home of TacticalShack",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
