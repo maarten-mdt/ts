@@ -20,11 +20,10 @@
     "@prisma/client": "^5.22.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
+    "prisma": "^5.22.0",
     "zod": "^3.23.8"
   },
-  "devDependencies": {
-    "prisma": "^5.22.0"
-  },
+  "devDependencies": {},
   "prisma": {
     "seed": "node prisma/seed.js"
   }
