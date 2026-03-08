@@ -10,7 +10,7 @@ const reviewSchema = z.object({
   rangeId: z.string().cuid(),
   rating: z.number().min(1).max(5),
   body: z.string().min(10),
-  visitDate: z.string().datetime().optional(),
+  visitDate: z.string().optional(),
 })
 
 // GET /api/reviews?rangeId=xxx — Public

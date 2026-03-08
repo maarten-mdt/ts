@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Outlet, Link, NavLink } from 'react-router-dom'
-import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/clerk-react'
+import { SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react'
+import { useAppAuth } from '../lib/AuthProvider'
+
+const hasClerk = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 const navItems = [
   { to: '/ranges', label: 'Find a Range' },
@@ -12,7 +15,7 @@ const navItems = [
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { isSignedIn } = useAuth()
+  const { isSignedIn } = useAppAuth()
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -45,6 +48,7 @@ export default function Layout() {
                   {comingSoon && <span className="ml-1 text-xs">(soon)</span>}
                 </NavLink>
               ))}
+              {hasClerk && (
               <span className="ml-2 flex items-center gap-1">
                 {isSignedIn ? (
                   <UserButton
@@ -75,6 +79,7 @@ export default function Layout() {
                   </>
                 )}
               </span>
+              )}
             </nav>
 
             <button
@@ -107,6 +112,7 @@ export default function Layout() {
                     {comingSoon && <span className="text-xs text-stone-500 ml-1">(coming soon)</span>}
                   </Link>
                 ))}
+                {hasClerk && (
                 <div className="mt-2 pt-2 border-t border-stone-700 flex gap-2">
                   {isSignedIn ? (
                     <UserButton afterSignOutUrl="/" />
@@ -125,6 +131,7 @@ export default function Layout() {
                     </>
                   )}
                 </div>
+                )}
               </div>
             </div>
           )}

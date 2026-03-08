@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import RangeReviews from '../components/RangeReviews'
 
 function Stars({ rating }) {
   if (rating == null) return null
@@ -250,12 +251,7 @@ export default function RangeDetail() {
           </section>
         )}
 
-        <section>
-          <h2 className="text-lg font-semibold text-stone-100 mb-2">Reviews</h2>
-          <p className="text-stone-500 mb-4">
-            Community reviews and &quot;Write a Review&quot; will appear here. (Requires login)
-          </p>
-        </section>
+        <RangeReviews range={range} />
       </div>
 
       {!range.claimed && (

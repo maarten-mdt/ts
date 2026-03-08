@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { SignInButton } from '@clerk/clerk-react'
+
+const hasClerk = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 import { useApi } from '../lib/useApi'
 
 const VERIFICATION_OPTIONS = [
@@ -51,11 +53,15 @@ export default function RangeClaimForm() {
         <p className="mt-2 text-stone-400 mb-4">
           Sign in to submit a claim for this listing.
         </p>
-        <SignInButton mode="modal">
-          <button type="button" className="px-4 py-2 rounded bg-accent text-white font-medium hover:bg-accent-light">
-            Sign in
-          </button>
-        </SignInButton>
+        {hasClerk ? (
+          <SignInButton mode="modal">
+            <button type="button" className="px-4 py-2 rounded bg-accent text-white font-medium hover:bg-accent-light">
+              Sign in
+            </button>
+          </SignInButton>
+        ) : (
+          <p className="text-stone-500">Sign in is not configured.</p>
+        )}
       </div>
     )
   }

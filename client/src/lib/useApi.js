@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useAppAuth } from './AuthProvider'
 
 const API_BASE = '/api'
 
@@ -8,7 +8,7 @@ const API_BASE = '/api'
  * when the user is signed in (for protected routes like claims, reviews).
  */
 export function useApi() {
-  const { getToken, isSignedIn } = useAuth()
+  const { getToken, isSignedIn } = useAppAuth()
 
   const request = useCallback(
     async (path, options = {}) => {
