@@ -1,4 +1,7 @@
 import 'dotenv/config'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { existsSync } from 'fs'
 import express from 'express'
 import cors from 'cors'
 import { clerkMiddleware } from '@clerk/express'
@@ -7,6 +10,7 @@ import { claimsRouter } from './routes/claims.js'
 import { reviewsRouter } from './routes/reviews.js'
 import { adminRouter } from './routes/admin.js'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT ?? 3001
 
@@ -24,6 +28,15 @@ app.use('/api/ranges', rangesRouter)
 app.use('/api/claims', claimsRouter)
 app.use('/api/reviews', reviewsRouter)
 app.use('/api/admin', adminRouter)
+
+// Serve built frontend (when deployed with client built)
+const clientDist = path.resolve(__dirname, '../../client/dist')
+if (existsSync(clientDist)) {
+  app.use(express.static(clientDist))
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'))
+  })
+}
 
 app.use((err, req, res, next) => {
   console.error(err)
