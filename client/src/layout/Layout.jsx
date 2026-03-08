@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Outlet, Link, NavLink } from 'react-router-dom'
+import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/clerk-react'
 
 const navItems = [
   { to: '/ranges', label: 'Find a Range' },
@@ -11,6 +12,7 @@ const navItems = [
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { isSignedIn } = useAuth()
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -43,6 +45,36 @@ export default function Layout() {
                   {comingSoon && <span className="ml-1 text-xs">(soon)</span>}
                 </NavLink>
               ))}
+              <span className="ml-2 flex items-center gap-1">
+                {isSignedIn ? (
+                  <UserButton
+                    afterSignOutUrl="/"
+                    appearance={{
+                      elements: { avatarBox: 'w-8 h-8' },
+                      variables: { colorPrimary: '#c8622a' },
+                    }}
+                  />
+                ) : (
+                  <>
+                    <SignInButton mode="modal">
+                      <button
+                        type="button"
+                        className="px-3 py-2 rounded text-sm font-medium text-stone-300 hover:text-stone-100 hover:bg-surface-muted"
+                      >
+                        Sign in
+                      </button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <button
+                        type="button"
+                        className="px-3 py-2 rounded text-sm font-medium bg-accent text-white hover:bg-accent-light"
+                      >
+                        Sign up
+                      </button>
+                    </SignUpButton>
+                  </>
+                )}
+              </span>
             </nav>
 
             <button
@@ -75,6 +107,24 @@ export default function Layout() {
                     {comingSoon && <span className="text-xs text-stone-500 ml-1">(coming soon)</span>}
                   </Link>
                 ))}
+                <div className="mt-2 pt-2 border-t border-stone-700 flex gap-2">
+                  {isSignedIn ? (
+                    <UserButton afterSignOutUrl="/" />
+                  ) : (
+                    <>
+                      <SignInButton mode="modal">
+                        <button type="button" className="px-3 py-2 rounded text-sm text-stone-300">
+                          Sign in
+                        </button>
+                      </SignInButton>
+                      <SignUpButton mode="modal">
+                        <button type="button" className="px-3 py-2 rounded text-sm bg-accent text-white">
+                          Sign up
+                        </button>
+                      </SignUpButton>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}

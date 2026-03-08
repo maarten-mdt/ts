@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { SignInButton } from '@clerk/clerk-react'
+import { useApi } from '../lib/useApi'
 
 const VERIFICATION_OPTIONS = [
   "I manage the range's website/email",
@@ -12,6 +13,7 @@ const VERIFICATION_OPTIONS = [
 export default function RangeClaimForm() {
   const { slug } = useParams()
   const queryClient = useQueryClient()
+  const { api, isSignedIn } = useApi()
   const [submitted, setSubmitted] = useState(false)
   const [form, setForm] = useState({
     claimantName: '',
@@ -28,6 +30,36 @@ export default function RangeClaimForm() {
   })
   const range = rangeData?.data
 
+  if (!range) {
+    return (
+      <div>
+        <Link to="/ranges" className="text-sm text-stone-500 hover:text-stone-300 mb-4 inline-block">
+          ← Back to ranges
+        </Link>
+        <p className="text-stone-500">Loading...</p>
+      </div>
+    )
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div>
+        <Link to={`/ranges/${slug}`} className="text-sm text-stone-500 hover:text-stone-300 mb-4 inline-block">
+          ← Back to range
+        </Link>
+        <h1 className="text-2xl font-bold text-stone-100">Claim: {range.name}</h1>
+        <p className="mt-2 text-stone-400 mb-4">
+          Sign in to submit a claim for this listing.
+        </p>
+        <SignInButton mode="modal">
+          <button type="button" className="px-4 py-2 rounded bg-accent text-white font-medium hover:bg-accent-light">
+            Sign in
+          </button>
+        </SignInButton>
+      </div>
+    )
+  }
+
   const mutation = useMutation({
     mutationFn: (body) => api.post('/claims', { ...body, rangeId: range?.id }),
     onSuccess: () => {
@@ -42,17 +74,6 @@ export default function RangeClaimForm() {
       ...form,
       verificationNote: form.verificationNote || form.note,
     })
-  }
-
-  if (!range) {
-    return (
-      <div>
-        <Link to="/ranges" className="text-sm text-stone-500 hover:text-stone-300 mb-4 inline-block">
-          ← Back to ranges
-        </Link>
-        <p className="text-stone-500">Loading...</p>
-      </div>
-    )
   }
 
   if (range.claimed) {
