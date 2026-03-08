@@ -36,8 +36,13 @@ export async function auth(req, res, next) {
     }
 
     // Clerk auth (from clerkMiddleware)
-    const { userId } = getAuth(req)
+    const auth = getAuth(req)
+    const { userId } = auth
     if (!userId) {
+      // Debug: helps diagnose production auth issues (remove after fixing)
+      const hasAuth = !!authHeader
+      const hasBearer = authHeader?.startsWith('Bearer ')
+      console.warn('[auth] 401:', req.method, req.path, { hasAuth, hasBearer, hasClerkSecret: !!process.env.CLERK_SECRET_KEY })
       return res.status(401).json({ success: false, error: 'Unauthorized' })
     }
 
@@ -64,7 +69,7 @@ export async function auth(req, res, next) {
     }
     next()
   } catch (err) {
-    console.error('[auth]', err)
+    console.error('[auth] error:', err?.message ?? err)
     res.status(401).json({ success: false, error: 'Unauthorized' })
   }
 }
