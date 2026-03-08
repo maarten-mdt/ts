@@ -1,0 +1,210 @@
+// TacticalShack — Prisma Schema
+// Supports Ranges (V1) + full user/role infrastructure for future features
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USERS & ROLES ────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  clerkId       String    @unique
+  email         String    @unique
+  name          String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ownedRanges   Range[]   @relation("RangeOwner")
+  claims        Claim[]
+  reviews       Review[]
+  apiKeys       ApiKey[]
+  savedRanges   SavedRange[]
+}
+
+enum Role {
+  USER
+  RANGE_OWNER
+  GUNSMITH
+  ADMIN
+  AGENT
+}
+
+// ─── API KEYS (for AI agent) ──────────────────────────────────
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  key         String    @unique @default(cuid())
+  label       String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  role        Role      @default(AGENT)
+  active      Boolean   @default(true)
+  lastUsed    DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// ─── RANGES ───────────────────────────────────────────────────
+
+model Range {
+  id                    String        @id @default(cuid())
+  slug                  String        @unique
+  name                  String
+  status                RangeStatus   @default(PENDING)
+
+  ownerId               String?
+  owner                 User?         @relation("RangeOwner", fields: [ownerId], references: [id])
+  claimed               Boolean       @default(false)
+  claimedAt             DateTime?
+
+  address               String
+  city                  String
+  state                 String
+  zip                   String
+  country               String        @default("US")
+  lat                   Float
+  lng                   Float
+
+  googlePlaceId         String?       @unique
+  googleRating          Float?
+  googleReviewCount     Int?
+  googleRatingUpdated   DateTime?
+
+  maxDistanceYards      Int
+  numberOfLanes         Int?
+  rangeType             RangeType     @default(PUBLIC)
+
+  surfaceTypes          String[]
+  coveredPositions      Boolean       @default(false)
+  proneAllowed          Boolean       @default(true)
+  benchRests            Boolean       @default(false)
+  numberOfBenches       Int?
+
+  steelTargetsAllowed   Boolean       @default(false)
+  membershipRequired    Boolean       @default(false)
+  dayFeeAvailable       Boolean       @default(true)
+  dayFeeAmount          Decimal?      @db.Decimal(8, 2)
+  membershipFeeAnnual   Decimal?      @db.Decimal(8, 2)
+  rfOfficerRequired     Boolean       @default(false)
+  coldRangeOnly         Boolean       @default(false)
+
+  magRestrictions       String?
+  suppressorFriendly    Boolean       @default(true)
+
+  restroomsOnSite       Boolean       @default(false)
+  parkingAvailable      Boolean       @default(true)
+  roofedShooting        Boolean       @default(false)
+  lightingAvailable     Boolean       @default(false)
+  targetRentals         Boolean       @default(false)
+  ammoAvailable         Boolean       @default(false)
+  gunRentals            Boolean       @default(false)
+  classesOffered        Boolean       @default(false)
+  fflOnSite             Boolean       @default(false)
+
+  hostsMatches          Boolean       @default(false)
+  matchTypes            String[]
+  matchScheduleUrl      String?
+
+  hoursNotes            String?
+  seasonalClosure       Boolean       @default(false)
+  seasonalNotes         String?
+
+  website               String?
+  phone                 String?
+  email                 String?
+
+  photos                String[]
+  heroPhoto             String?
+
+  description           String?
+  adminNotes            String?
+
+  verified              Boolean       @default(false)
+  featured              Boolean       @default(false)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  claims                Claim[]
+  reviews               Review[]
+  savedBy               SavedRange[]
+}
+
+enum RangeStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum RangeType {
+  PUBLIC
+  PRIVATE
+  CLUB
+  COMMERCIAL
+  MILITARY
+}
+
+// ─── CLAIMS ───────────────────────────────────────────────────
+
+model Claim {
+  id               String      @id @default(cuid())
+  rangeId          String
+  range            Range       @relation(fields: [rangeId], references: [id])
+  userId           String
+  user             User        @relation(fields: [userId], references: [id])
+  status           ClaimStatus @default(PENDING)
+
+  claimantName     String
+  claimantTitle    String
+  claimantPhone    String
+  claimantEmail    String
+  verificationNote String?
+
+  adminNote        String?
+  reviewedAt       DateTime?
+  createdAt        DateTime    @default(now())
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── REVIEWS ──────────────────────────────────────────────────
+
+model Review {
+  id          String   @id @default(cuid())
+  rangeId     String
+  range       Range    @relation(fields: [rangeId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  rating      Int
+  body        String
+  visitDate   DateTime?
+  helpful     Int      @default(0)
+  flagged     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([rangeId, userId])
+}
+
+// ─── SAVED RANGES ─────────────────────────────────────────────
+
+model SavedRange {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rangeId   String
+  range     Range    @relation(fields: [rangeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, rangeId])
+}

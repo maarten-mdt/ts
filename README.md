@@ -1,62 +1,81 @@
 # TacticalShack
 
-Temporary landing: **This is the future home of TacticalShack.**
+Precision shooter's utility platform — find ranges, gunsmiths, track NFA wait times, verify parts compatibility.
 
----
+## Project structure
 
-## Connect to GitHub
+- **`client/`** — React + Vite + Tailwind + React Router frontend
+- **`server/`** — Node.js + Express + Prisma backend
+- **`tacticalshack-brief.md`** — Product brief
+- **`tacticalshack-ranges-instructions.md`** — Ranges feature build instructions
 
-**Requires:** [Git](https://git-scm.com/download/win) installed and in your PATH.
+## Setup
 
-1. **Create a new repository on GitHub**
-   - Go to [github.com/new](https://github.com/new)
-   - Name it `TacticalShack` (or your choice)
-   - Do **not** initialize with a README (this repo already has one)
+### 1. Install dependencies
 
-2. **Connect this folder and push**
-   From the project folder in a terminal:
+```bash
+npm install
+```
 
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit: temporary home page"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/TacticalShack.git
-   git push -u origin main
-   ```
+### 2. Database (PostgreSQL)
 
-   Replace `YOUR_USERNAME` with your GitHub username. If you use SSH:
+Create a PostgreSQL database, then:
 
-   ```bash
-   git remote add origin git@github.com:YOUR_USERNAME/TacticalShack.git
-   ```
+```bash
+cd server
+cp .env.example .env
+# Edit .env and set DATABASE_URL
+```
 
----
+### 3. Prisma
 
-## Connect to Railway
+```bash
+npm run db:migrate   # Creates tables
+npm run db:seed      # Seeds 6 sample ranges
+```
 
-1. **Sign in**
-   - Go to [railway.app](https://railway.app) and sign in (use “Login with GitHub” so it can see your repos).
+### 4. Run development servers
 
-2. **New project from GitHub**
-   - Click **New Project** → **Deploy from GitHub repo**
-   - Select the **TacticalShack** repository
-   - Choose the **main** branch (or the branch you use)
+```bash
+npm run dev
+```
 
-3. **Deploy**
-   - Railway will detect the Node app (`package.json` + `"start": "node server.js"`) and deploy. No extra config needed.
+- **Client:** http://localhost:5173
+- **API:** http://localhost:3001
 
-4. **Domain**
-   - In your service → **Settings** → **Networking**, click **Generate Domain**. You’ll get a `*.railway.app` URL.
+Or double‑click `start-dev.cmd` (Windows).
 
----
+## Environment variables
 
-## Summary
+See `server/.env.example`. Required for local development:
 
-| Step | Action |
-|------|--------|
-| GitHub | Create repo → `git init`, add remote, push |
-| Railway | New Project → Deploy from GitHub → select TacticalShack repo |
-| Deploy | Every push to the connected branch will deploy on Railway |
+- `DATABASE_URL` — PostgreSQL connection string
 
-Once GitHub and Railway are connected, your temporary home page will be live at the Railway URL.
+Optional (for full functionality):
+
+- `CLERK_SECRET_KEY` — Auth (claims, reviews require login)
+- `GOOGLE_PLACES_API_KEY` — Google ratings
+- `GOOGLE_MAPS_API_KEY` — Maps embeds
+
+## Scripts
+
+| Command | Description |
+|--------|-------------|
+| `npm run dev` | Run client + API (concurrent) |
+| `npm run build` | Build client for production |
+| `npm run db:migrate` | Run Prisma migrations |
+| `npm run db:seed` | Seed ranges |
+| `npm run db:studio` | Open Prisma Studio |
+
+## Deploy to Railway
+
+- **Frontend:** Build `client/`, serve `dist/`
+- **Backend:** Deploy `server/` as Node service
+- **Database:** Add PostgreSQL from Railway
+
+## GitHub
+
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/ts.git
+git push -u origin main
+```

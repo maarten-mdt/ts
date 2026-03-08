@@ -3,6 +3,7 @@ import Layout from './layout/Layout'
 import Home from './pages/Home'
 import Ranges from './pages/Ranges'
 import RangeDetail from './pages/RangeDetail'
+import RangeClaimForm from './pages/RangeClaimForm'
 import Gunsmiths from './pages/Gunsmiths'
 import GunsmithDetail from './pages/GunsmithDetail'
 import NFATracker from './pages/NFATracker'
@@ -21,6 +22,7 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="ranges" element={<Ranges />} />
         <Route path="ranges/:slug" element={<RangeDetail />} />
+        <Route path="ranges/:slug/claim" element={<RangeClaimForm />} />
         <Route path="gunsmiths" element={<Gunsmiths />} />
         <Route path="gunsmiths/:slug" element={<GunsmithDetail />} />
         <Route path="nfa-tracker" element={<NFATracker />} />
