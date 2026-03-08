@@ -20,8 +20,11 @@ export function useApi() {
       if (isSignedIn) {
         try {
           const token = await getToken()
-          if (token) headers.Authorization = `Bearer ${token}`
-        } catch (_) {}
+          if (!token) throw new Error('Session token not ready. Please wait a moment and try again.')
+          headers.Authorization = `Bearer ${token}`
+        } catch (err) {
+          throw err
+        }
       }
       const res = await fetch(url, {
         ...options,
