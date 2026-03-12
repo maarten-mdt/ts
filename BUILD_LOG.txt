@@ -1,0 +1,42 @@
+================================================================================
+TACTICALSHACK — BUILD LOG (resume after power loss)
+================================================================================
+Copy this line and tell the AI in a NEW chat:
+  "Continue the build from BUILD_LOG.txt in the project root. Read it and pick up where it left off."
+
+================================================================================
+SESSION GOAL (this run)
+================================================================================
+1. Quick wins: Saved listings (save/unsave + UI), Profile page (my saved, my reviews).
+2. Refresh Google: POST /api/gunsmiths/:id/refresh-google (and ranges if applicable).
+3. Then: Parts Compatibility (schema, API, seed, UI, suggest form, admin queue).
+
+================================================================================
+PLANNED ORDER OF WORK
+================================================================================
+[x] 1. Backend: Saved ranges — GET /api/ranges/saved, POST/DELETE /api/ranges/:id/save. Range detail returns saved when auth.
+[x] 2. Backend: Saved gunsmiths — GET /api/gunsmiths/saved, POST/DELETE /api/gunsmiths/:id/save. Gunsmith detail returns saved when auth.
+[x] 3. Frontend: Save/Unsave buttons on RangeDetail and GunsmithDetail (when signed in).
+[x] 4. Frontend: Profile page at /profile — My saved ranges, My saved gunsmiths, My reviews, link to NFA, link to Dashboard.
+[x] 4b. Backend: GET /api/reviews/mine for profile.
+[x] 5. Backend: POST /api/gunsmiths/:id/refresh-google and POST /api/ranges/:id/refresh-google (using existing googlePlaces.refreshRatingById).
+[ ] 6. Parts Compatibility: Prisma models (Component, CompatibilityPair?), API, seed data, /compatibility page (selector + results), Suggest form, Admin queue.
+
+================================================================================
+COMPLETED (update as you go)
+================================================================================
+- Saved ranges API (GET /saved, POST|DELETE /:id/save), range detail optionalAuth + saved.
+- Saved gunsmiths API (GET /saved, POST|DELETE /:id/save), gunsmith detail + saved.
+- GET /api/reviews/mine for profile.
+- Save/Unsave on RangeDetail and GunsmithDetail (useApi, mutations, saved in response).
+- Profile page (/profile), route and nav (Profile + Dashboard when signed in).
+- POST /api/ranges/:id/refresh-google and POST /api/gunsmiths/:id/refresh-google (ADMIN/AGENT), using googlePlaces.refreshRatingById.
+
+================================================================================
+HOW TO RESUME
+================================================================================
+1. Open BUILD_LOG.txt and see "COMPLETED" and "PLANNED ORDER" to know what's done vs next.
+2. In a new Cursor chat say: "Continue the build from BUILD_LOG.txt. Read it and pick up where it left off."
+3. The AI will read this file, check the codebase (routes, schema, pages), and continue from the next unchecked item.
+
+================================================================================

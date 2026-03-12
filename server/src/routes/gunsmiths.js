@@ -6,6 +6,7 @@ import { auth, optionalAuth } from '../middleware/auth.js'
 import { requireRole } from '../middleware/roles.js'
 import { verifyFflNumber, normalizeFflNumber } from '../services/fflVerification.js'
 import { uploadBuffer, isConfigured } from '../lib/cloudinary.js'
+import { refreshRatingById } from '../services/googlePlaces.js'
 
 export const gunsmithsRouter = Router()
 
@@ -184,6 +185,54 @@ gunsmithsRouter.get('/by-id/:id', auth, requireRole('GUNSMITH', 'ADMIN'), async 
   }
 })
 
+// GET /api/gunsmiths/saved — Auth: list current user's saved gunsmiths
+gunsmithsRouter.get('/saved', auth, async (req, res) => {
+  try {
+    const saved = await prisma.savedGunsmith.findMany({
+      where: { userId: req.user.id },
+      include: { gunsmith: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json({ success: true, data: saved.map((s) => s.gunsmith) })
+  } catch (err) {
+    console.error('[GET /api/gunsmiths/saved]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// POST /api/gunsmiths/:id/save — Auth: save gunsmith
+gunsmithsRouter.post('/:id/save', auth, async (req, res) => {
+  try {
+    const gunsmith = await prisma.gunsmith.findUnique({ where: { id: req.params.id } })
+    if (!gunsmith) return res.status(404).json({ success: false, error: 'Gunsmith not found' })
+    await prisma.savedGunsmith.upsert({
+      where: {
+        userId_gunsmithId: { userId: req.user.id, gunsmithId: gunsmith.id },
+      },
+      create: { userId: req.user.id, gunsmithId: gunsmith.id },
+      update: {},
+    })
+    res.json({ success: true })
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ success: false, error: 'Gunsmith not found' })
+    console.error('[POST /api/gunsmiths/:id/save]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// DELETE /api/gunsmiths/:id/save — Auth: unsave gunsmith
+gunsmithsRouter.delete('/:id/save', auth, async (req, res) => {
+  try {
+    await prisma.savedGunsmith.deleteMany({
+      where: { userId: req.user.id, gunsmithId: req.params.id },
+    })
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[DELETE /api/gunsmiths/:id/save]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
 // POST /api/gunsmiths/:id/ffl-upload — Auth: GUNSMITH (own) or ADMIN — upload FFL PDF
 gunsmithsRouter.post('/:id/ffl-upload', auth, requireRole('GUNSMITH', 'ADMIN'), uploadMemory.single('file'), async (req, res) => {
   try {
@@ -340,6 +389,13 @@ gunsmithsRouter.get('/:slug', optionalAuth, async (req, res) => {
 
     const showFullFfl = req.user && (req.user.role === 'ADMIN' || gunsmith.ownerId === req.user.id)
     const canEdit = req.user && (req.user.role === 'ADMIN' || gunsmith.ownerId === req.user.id)
+    let saved = false
+    if (req.user) {
+      const savedRow = await prisma.savedGunsmith.findUnique({
+        where: { userId_gunsmithId: { userId: req.user.id, gunsmithId: gunsmith.id } },
+      })
+      saved = !!savedRow
+    }
     const maskFfl = (num) => {
       if (!num) return null
       if (showFullFfl) return num
@@ -356,6 +412,7 @@ gunsmithsRouter.get('/:slug', optionalAuth, async (req, res) => {
         ourRating: avgReview._avg.rating,
         ourReviewCount: avgReview._count,
         canEdit: !!canEdit,
+        saved,
       },
     })
   } catch (err) {
@@ -537,6 +594,32 @@ gunsmithsRouter.post('/:id/verify-ffl', auth, requireRole('ADMIN', 'AGENT'), asy
     res.json({ success: true, data: updated, verification: result })
   } catch (err) {
     console.error('[POST /api/gunsmiths/:id/verify-ffl]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// POST /api/gunsmiths/:id/refresh-google — Auth: ADMIN or AGENT — refresh Google rating
+gunsmithsRouter.post('/:id/refresh-google', auth, requireRole('ADMIN', 'AGENT'), async (req, res) => {
+  try {
+    const gunsmith = await prisma.gunsmith.findUnique({ where: { id: req.params.id } })
+    if (!gunsmith) return res.status(404).json({ success: false, error: 'Gunsmith not found' })
+    if (!gunsmith.googlePlaceId) return res.status(400).json({ success: false, error: 'Gunsmith has no Google Place ID' })
+    const result = await refreshRatingById(gunsmith.googlePlaceId)
+    if (!result) return res.status(502).json({ success: false, error: 'Google Places API unavailable or not configured' })
+    await prisma.gunsmith.update({
+      where: { id: req.params.id },
+      data: {
+        googleRating: result.rating,
+        googleReviewCount: result.userRatingsTotal,
+        googleRatingUpdated: new Date(),
+      },
+    })
+    res.json({
+      success: true,
+      data: { googleRating: result.rating, googleReviewCount: result.userRatingsTotal },
+    })
+  } catch (err) {
+    console.error('[POST /api/gunsmiths/:id/refresh-google]', err)
     res.status(500).json({ success: false, error: err.message })
   }
 })

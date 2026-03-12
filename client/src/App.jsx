@@ -9,6 +9,7 @@ import GunsmithDetail from './pages/GunsmithDetail'
 import GunsmithClaimForm from './pages/GunsmithClaimForm'
 import GunsmithDashboard from './pages/GunsmithDashboard'
 import GunsmithEdit from './pages/GunsmithEdit'
+import Profile from './pages/Profile'
 import NFATracker from './pages/NFATracker'
 import Compatibility from './pages/Compatibility'
 import Matches from './pages/Matches'
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="gunsmiths/:slug/claim" element={<GunsmithClaimForm />} />
         <Route path="dashboard/gunsmiths" element={<GunsmithDashboard />} />
         <Route path="dashboard/gunsmiths/:id/edit" element={<GunsmithEdit />} />
+        <Route path="profile" element={<Profile />} />
         <Route path="nfa-tracker" element={<NFATracker />} />
         <Route path="compatibility" element={<Compatibility />} />
         <Route path="matches" element={<Matches />} />

@@ -85,6 +85,15 @@ export default function GunsmithDetail() {
     onSuccess: invalidateGunsmith,
   })
 
+  const saveMutation = useMutation({
+    mutationFn: (id) => api.post(`/gunsmiths/${id}/save`),
+    onSuccess: invalidateGunsmith,
+  })
+  const unsaveMutation = useMutation({
+    mutationFn: (id) => api.delete(`/gunsmiths/${id}/save`),
+    onSuccess: invalidateGunsmith,
+  })
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['gunsmith', slug],
     queryFn: () => api.get(`/gunsmiths/${slug}`),
@@ -125,13 +134,36 @@ export default function GunsmithDetail() {
       <Link to="/gunsmiths" className="text-sm text-stone-500 hover:text-stone-300 mb-4 inline-block">← Back to gunsmiths</Link>
 
       <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-stone-100 flex items-center gap-2">
-          {displayName}
-          {g.verified && <span className="text-sm px-2 py-1 rounded bg-accent/20 text-accent">Verified</span>}
-          <span className="px-2 py-1 rounded bg-surface-muted text-stone-300 text-sm">
-            {FOCUS_LABELS[g.primaryFocus] ?? g.primaryFocus}
-          </span>
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-stone-100 flex items-center gap-2">
+            {displayName}
+            {g.verified && <span className="text-sm px-2 py-1 rounded bg-accent/20 text-accent">Verified</span>}
+            <span className="px-2 py-1 rounded bg-surface-muted text-stone-300 text-sm">
+              {FOCUS_LABELS[g.primaryFocus] ?? g.primaryFocus}
+            </span>
+          </h1>
+          {isSignedIn && !g.canEdit && (
+            g.saved ? (
+              <button
+                type="button"
+                onClick={() => unsaveMutation.mutate(g.id)}
+                disabled={unsaveMutation.isPending}
+                className="px-3 py-1.5 rounded border border-stone-600 text-stone-400 text-sm hover:bg-surface-muted disabled:opacity-50"
+              >
+                {unsaveMutation.isPending ? '…' : 'Saved ✓'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => saveMutation.mutate(g.id)}
+                disabled={saveMutation.isPending}
+                className="px-3 py-1.5 rounded border border-stone-600 text-stone-300 text-sm hover:bg-surface-muted disabled:opacity-50"
+              >
+                {saveMutation.isPending ? '…' : 'Save'}
+              </button>
+            )
+          )}
+        </div>
         {g.shopName && g.name !== g.shopName && (
           <p className="text-stone-500 mt-0.5">Operated by {g.name}</p>
         )}

@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { api } from '../lib/api'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useApi } from '../lib/useApi'
 import RangeReviews from '../components/RangeReviews'
 
 function Stars({ rating }) {
@@ -24,9 +24,20 @@ function Stars({ rating }) {
 
 export default function RangeDetail() {
   const { slug } = useParams()
+  const { api, isSignedIn } = useApi()
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({
     queryKey: ['range', slug],
     queryFn: () => api.get(`/ranges/${slug}`),
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: (id) => api.post(`/ranges/${id}/save`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['range', slug] }),
+  })
+  const unsaveMutation = useMutation({
+    mutationFn: (id) => api.delete(`/ranges/${id}/save`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['range', slug] }),
   })
 
   const range = data?.data
@@ -66,12 +77,35 @@ export default function RangeDetail() {
       </Link>
 
       <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-stone-100 flex items-center gap-2">
-          {range.name}
-          {range.verified && (
-            <span className="text-sm px-2 py-1 rounded bg-accent/20 text-accent">Verified</span>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-stone-100 flex items-center gap-2">
+            {range.name}
+            {range.verified && (
+              <span className="text-sm px-2 py-1 rounded bg-accent/20 text-accent">Verified</span>
+            )}
+          </h1>
+          {isSignedIn && (
+            range.saved ? (
+              <button
+                type="button"
+                onClick={() => unsaveMutation.mutate(range.id)}
+                disabled={unsaveMutation.isPending}
+                className="px-3 py-1.5 rounded border border-stone-600 text-stone-400 text-sm hover:bg-surface-muted disabled:opacity-50"
+              >
+                {unsaveMutation.isPending ? '…' : 'Saved ✓'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => saveMutation.mutate(range.id)}
+                disabled={saveMutation.isPending}
+                className="px-3 py-1.5 rounded border border-stone-600 text-stone-300 text-sm hover:bg-surface-muted disabled:opacity-50"
+              >
+                {saveMutation.isPending ? '…' : 'Save'}
+              </button>
+            )
           )}
-        </h1>
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-4 text-stone-400">
           <a
             href={directionsUrl}

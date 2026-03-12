@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { auth, optionalAuth } from '../middleware/auth.js'
 import { requireRole } from '../middleware/roles.js'
+import { refreshRatingById } from '../services/googlePlaces.js'
 
 export const rangesRouter = Router()
 
@@ -130,8 +131,82 @@ rangesRouter.get('/', async (req, res) => {
   }
 })
 
+// GET /api/ranges/saved — Auth: list current user's saved ranges
+rangesRouter.get('/saved', auth, async (req, res) => {
+  try {
+    const saved = await prisma.savedRange.findMany({
+      where: { userId: req.user.id },
+      include: { range: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json({ success: true, data: saved.map((s) => s.range) })
+  } catch (err) {
+    console.error('[GET /api/ranges/saved]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// POST /api/ranges/:id/save — Auth: save range
+rangesRouter.post('/:id/save', auth, async (req, res) => {
+  try {
+    const range = await prisma.range.findUnique({ where: { id: req.params.id } })
+    if (!range) return res.status(404).json({ success: false, error: 'Range not found' })
+    await prisma.savedRange.upsert({
+      where: {
+        userId_rangeId: { userId: req.user.id, rangeId: range.id },
+      },
+      create: { userId: req.user.id, rangeId: range.id },
+      update: {},
+    })
+    res.json({ success: true })
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ success: false, error: 'Range not found' })
+    console.error('[POST /api/ranges/:id/save]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// DELETE /api/ranges/:id/save — Auth: unsave range
+rangesRouter.delete('/:id/save', auth, async (req, res) => {
+  try {
+    await prisma.savedRange.deleteMany({
+      where: { userId: req.user.id, rangeId: req.params.id },
+    })
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[DELETE /api/ranges/:id/save]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// POST /api/ranges/:id/refresh-google — Auth: ADMIN or AGENT — refresh Google rating
+rangesRouter.post('/:id/refresh-google', auth, requireRole('ADMIN', 'AGENT'), async (req, res) => {
+  try {
+    const range = await prisma.range.findUnique({ where: { id: req.params.id } })
+    if (!range) return res.status(404).json({ success: false, error: 'Range not found' })
+    if (!range.googlePlaceId) return res.status(400).json({ success: false, error: 'Range has no Google Place ID' })
+    const result = await refreshRatingById(range.googlePlaceId)
+    if (!result) return res.status(502).json({ success: false, error: 'Google Places API unavailable or not configured' })
+    await prisma.range.update({
+      where: { id: req.params.id },
+      data: {
+        googleRating: result.rating,
+        googleReviewCount: result.userRatingsTotal,
+        googleRatingUpdated: new Date(),
+      },
+    })
+    res.json({
+      success: true,
+      data: { googleRating: result.rating, googleReviewCount: result.userRatingsTotal },
+    })
+  } catch (err) {
+    console.error('[POST /api/ranges/:id/refresh-google]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
 // GET /api/ranges/:slug — Public single range
-rangesRouter.get('/:slug', async (req, res) => {
+rangesRouter.get('/:slug', optionalAuth, async (req, res) => {
   try {
     const range = await prisma.range.findUnique({
       where: { slug: req.params.slug, status: 'ACTIVE' },
@@ -151,12 +226,21 @@ rangesRouter.get('/:slug', async (req, res) => {
       _count: true,
     })
 
+    let saved = false
+    if (req.user) {
+      const savedRow = await prisma.savedRange.findUnique({
+        where: { userId_rangeId: { userId: req.user.id, rangeId: range.id } },
+      })
+      saved = !!savedRow
+    }
+
     res.json({
       success: true,
       data: {
         ...rangePublic,
         ourRating: avgReview._avg.rating,
         ourReviewCount: avgReview._count,
+        saved,
       },
     })
   } catch (err) {

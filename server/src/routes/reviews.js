@@ -19,6 +19,24 @@ const gunsmithReviewSchema = z.object({
   visitDate: z.string().optional(),
 })
 
+// GET /api/reviews/mine — Auth: current user's reviews (for profile)
+reviewsRouter.get('/mine', auth, async (req, res) => {
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { userId: req.user.id },
+      include: {
+        range: { select: { id: true, slug: true, name: true } },
+        gunsmith: { select: { id: true, slug: true, name: true, shopName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json({ success: true, data: reviews })
+  } catch (err) {
+    console.error('[GET /api/reviews/mine]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
 // GET /api/reviews?rangeId=xxx or ?gunsmithId=xxx — Public
 reviewsRouter.get('/', async (req, res) => {
   try {
