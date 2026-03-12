@@ -1,11 +1,15 @@
 import { Router } from 'express'
+import multer from 'multer'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { auth, optionalAuth } from '../middleware/auth.js'
 import { requireRole } from '../middleware/roles.js'
 import { verifyFflNumber, normalizeFflNumber } from '../services/fflVerification.js'
+import { uploadBuffer, isConfigured } from '../lib/cloudinary.js'
 
 export const gunsmithsRouter = Router()
+
+const uploadMemory = multer({ storage: multer.memoryStorage() })
 
 const FOCUS_OPTIONS = ['RIFLE', 'HANDGUN', 'GENERAL', 'SHOTGUN', 'NFA']
 const SORT_OPTIONS = ['distance', 'rating', 'turnaround', 'newest', 'name']
@@ -176,6 +180,102 @@ gunsmithsRouter.get('/by-id/:id', auth, requireRole('GUNSMITH', 'ADMIN'), async 
     res.json({ success: true, data: gunsmith })
   } catch (err) {
     console.error('[GET /api/gunsmiths/by-id/:id]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// POST /api/gunsmiths/:id/ffl-upload — Auth: GUNSMITH (own) or ADMIN — upload FFL PDF
+gunsmithsRouter.post('/:id/ffl-upload', auth, requireRole('GUNSMITH', 'ADMIN'), uploadMemory.single('file'), async (req, res) => {
+  try {
+    const gunsmith = await prisma.gunsmith.findUnique({ where: { id: req.params.id } })
+    if (!gunsmith) return res.status(404).json({ success: false, error: 'Gunsmith not found' })
+    if (!canEditGunsmith(req, gunsmith)) return res.status(403).json({ success: false, error: 'Forbidden' })
+    if (!isConfigured()) return res.status(503).json({ success: false, error: 'Upload not configured (Cloudinary)' })
+    const file = req.file
+    if (!file || !file.buffer) return res.status(400).json({ success: false, error: 'No file uploaded' })
+    const result = await uploadBuffer(file.buffer, {
+      resource_type: 'raw',
+      folder: 'tacticalshack/ffl',
+      public_id: `gunsmith-${gunsmith.id}-ffl`,
+      overwrite: true,
+    })
+    const url = result.secure_url
+    await prisma.gunsmith.update({
+      where: { id: req.params.id },
+      data: { fflFileUrl: url },
+    })
+    res.json({ success: true, data: { fflFileUrl: url } })
+  } catch (err) {
+    console.error('[POST /api/gunsmiths/:id/ffl-upload]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// DELETE /api/gunsmiths/:id/ffl — Auth: GUNSMITH (own) or ADMIN
+gunsmithsRouter.delete('/:id/ffl', auth, requireRole('GUNSMITH', 'ADMIN'), async (req, res) => {
+  try {
+    const gunsmith = await prisma.gunsmith.findUnique({ where: { id: req.params.id } })
+    if (!gunsmith) return res.status(404).json({ success: false, error: 'Gunsmith not found' })
+    if (!canEditGunsmith(req, gunsmith)) return res.status(403).json({ success: false, error: 'Forbidden' })
+    await prisma.gunsmith.update({
+      where: { id: req.params.id },
+      data: { fflFileUrl: null },
+    })
+    res.json({ success: true })
+  } catch (err) {
+    console.error('[DELETE /api/gunsmiths/:id/ffl]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// POST /api/gunsmiths/:id/photos — Auth: GUNSMITH (own) or ADMIN — upload one or more images
+gunsmithsRouter.post('/:id/photos', auth, requireRole('GUNSMITH', 'ADMIN'), uploadMemory.array('photos', 10), async (req, res) => {
+  try {
+    const gunsmith = await prisma.gunsmith.findUnique({ where: { id: req.params.id } })
+    if (!gunsmith) return res.status(404).json({ success: false, error: 'Gunsmith not found' })
+    if (!canEditGunsmith(req, gunsmith)) return res.status(403).json({ success: false, error: 'Forbidden' })
+    if (!isConfigured()) return res.status(503).json({ success: false, error: 'Upload not configured (Cloudinary)' })
+    const files = req.files || []
+    if (files.length === 0) return res.status(400).json({ success: false, error: 'No photos uploaded' })
+    const urls = []
+    for (let i = 0; i < files.length; i++) {
+      const result = await uploadBuffer(files[i].buffer, {
+        folder: 'tacticalshack/gunsmiths',
+        public_id: `gunsmith-${gunsmith.id}-${Date.now()}-${i}`,
+      })
+      urls.push(result.secure_url)
+    }
+    const existing = Array.isArray(gunsmith.photos) ? gunsmith.photos : []
+    const updated = [...existing, ...urls]
+    await prisma.gunsmith.update({
+      where: { id: req.params.id },
+      data: { photos: updated },
+    })
+    res.json({ success: true, data: { photos: updated } })
+  } catch (err) {
+    console.error('[POST /api/gunsmiths/:id/photos]', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// DELETE /api/gunsmiths/:id/photos — Auth: GUNSMITH (own) or ADMIN — body: { url: "..." }
+gunsmithsRouter.delete('/:id/photos', auth, requireRole('GUNSMITH', 'ADMIN'), async (req, res) => {
+  try {
+    const gunsmith = await prisma.gunsmith.findUnique({ where: { id: req.params.id } })
+    if (!gunsmith) return res.status(404).json({ success: false, error: 'Gunsmith not found' })
+    if (!canEditGunsmith(req, gunsmith)) return res.status(403).json({ success: false, error: 'Forbidden' })
+    const url = req.body?.url
+    if (!url || typeof url !== 'string') return res.status(400).json({ success: false, error: 'Missing photo url' })
+    const existing = Array.isArray(gunsmith.photos) ? gunsmith.photos : []
+    const updated = existing.filter((u) => u !== url.trim())
+    if (updated.length === existing.length) return res.status(404).json({ success: false, error: 'Photo not found' })
+    await prisma.gunsmith.update({
+      where: { id: req.params.id },
+      data: { photos: updated, heroPhoto: gunsmith.heroPhoto === url ? null : gunsmith.heroPhoto },
+    })
+    res.json({ success: true, data: { photos: updated } })
+  } catch (err) {
+    console.error('[DELETE /api/gunsmiths/:id/photos]', err)
     res.status(500).json({ success: false, error: err.message })
   }
 })

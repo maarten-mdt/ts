@@ -29,6 +29,7 @@ model User {
   ownedGunsmiths   Gunsmith[]     @relation("GunsmithOwner")
   gunsmithClaims   GunsmithClaim[]
   savedGunsmiths   SavedGunsmith[]
+  nfaSubmissions   NfaSubmission[]
 }
 
 enum Role {
@@ -362,6 +363,50 @@ model FflSyncLog {
   recordCount Int
   success     Boolean
   errorNote   String?
+}
+
+// ─── NFA SUBMISSIONS (wait time tracker) ──────────────────────
+
+model NfaSubmission {
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id])
+  formType          NfaFormType
+  itemType          NfaItemType
+  submittedDate     DateTime
+  approvedDate      DateTime?
+  examinerName      String?
+  status            NfaSubmissionStatus @default(PENDING)
+  trustOrIndividual NfaTrustOrIndividual
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+enum NfaFormType {
+  FORM_1
+  FORM_4
+  EFORM_1
+  EFORM_4
+}
+
+enum NfaItemType {
+  SUPPRESSOR
+  SBR
+  SBS
+  MG
+  AOW
+}
+
+enum NfaSubmissionStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum NfaTrustOrIndividual {
+  TRUST
+  INDIVIDUAL
 }
 
 // ─── SAVED RANGES ─────────────────────────────────────────────

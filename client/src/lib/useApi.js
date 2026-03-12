@@ -46,8 +46,29 @@ export function useApi() {
       return request(path + search)
     },
     post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) }),
+    postForm: async (path, formData) => {
+      const url = path.startsWith('http') ? path : `${API_BASE}${path}`
+      const headers = {}
+      if (isSignedIn) {
+        const token = await getToken()
+        if (token) headers.Authorization = `Bearer ${token}`
+      }
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData,
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`)
+      return data
+    },
     patch: (path, body) => request(path, { method: 'PATCH', body: JSON.stringify(body) }),
-    delete: (path) => request(path, { method: 'DELETE' }),
+    delete: (path, body) =>
+      request(path, {
+        method: 'DELETE',
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      }),
   }
 
   return { api, isSignedIn }

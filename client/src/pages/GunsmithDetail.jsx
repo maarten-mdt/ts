@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
 import { useApi } from '../lib/useApi'
 import GunsmithReviews from '../components/GunsmithReviews'
 import { FOCUS_LABELS, SPECIALTY_LABELS } from '../lib/gunsmithTaxonomy'
@@ -43,13 +42,47 @@ export default function GunsmithDetail() {
   const { api, isSignedIn } = useApi()
   const queryClient = useQueryClient()
   const [fflRequested, setFflRequested] = useState(false)
+  const fflUploadRef = useRef(null)
+  const photosUploadRef = useRef(null)
+
+  const invalidateGunsmith = () => {
+    queryClient.invalidateQueries({ queryKey: ['gunsmith', slug] })
+  }
 
   const fflRequestMutation = useMutation({
     mutationFn: (id) => api.post(`/gunsmiths/${id}/ffl-request`),
     onSuccess: () => {
       setFflRequested(true)
-      queryClient.invalidateQueries({ queryKey: ['gunsmith', slug] })
+      invalidateGunsmith()
     },
+  })
+
+  const fflUploadMutation = useMutation({
+    mutationFn: async (file) => {
+      const form = new FormData()
+      form.append('file', file)
+      return api.postForm(`/gunsmiths/${g?.id}/ffl-upload`, form)
+    },
+    onSuccess: invalidateGunsmith,
+  })
+
+  const fflRemoveMutation = useMutation({
+    mutationFn: () => api.delete(`/gunsmiths/${g?.id}/ffl`),
+    onSuccess: invalidateGunsmith,
+  })
+
+  const photosUploadMutation = useMutation({
+    mutationFn: async (files) => {
+      const form = new FormData()
+      for (let i = 0; i < files.length; i++) form.append('photos', files[i])
+      return api.postForm(`/gunsmiths/${g?.id}/photos`, form)
+    },
+    onSuccess: invalidateGunsmith,
+  })
+
+  const photoRemoveMutation = useMutation({
+    mutationFn: (url) => api.delete(`/gunsmiths/${g?.id}/photos`, { url }),
+    onSuccess: invalidateGunsmith,
   })
 
   const { data, isLoading, error } = useQuery({
@@ -282,11 +315,91 @@ export default function GunsmithDetail() {
       </div>
 
       {g.canEdit && (
-        <div className="mt-8 p-6 rounded-lg border border-stone-700 bg-surface-elevated">
-          <p className="text-stone-300 mb-2">You manage this listing.</p>
-          <Link to={`/dashboard/gunsmiths/${g.id}/edit`} className="inline-block px-4 py-2 rounded bg-accent text-white font-medium hover:bg-accent-light">
-            Edit listing →
-          </Link>
+        <div className="mt-8 p-6 rounded-lg border border-stone-700 bg-surface-elevated space-y-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to={`/dashboard/gunsmiths/${g.id}/edit`} className="px-4 py-2 rounded bg-accent text-white font-medium hover:bg-accent-light">
+              Edit listing →
+            </Link>
+          </div>
+
+          {isUS && (
+            <div>
+              <h3 className="text-sm font-semibold text-stone-300 mb-2">FFL document</h3>
+              {g.fflFileUrl ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-stone-500 text-sm">PDF uploaded.</span>
+                  <button
+                    type="button"
+                    onClick={() => fflRemoveMutation.mutate()}
+                    disabled={fflRemoveMutation.isPending}
+                    className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+              <input
+                ref={fflUploadRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) fflUploadMutation.mutate(file)
+                  e.target.value = ''
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fflUploadRef.current?.click()}
+                disabled={fflUploadMutation.isPending}
+                className="mt-1 px-3 py-1.5 rounded border border-stone-600 text-stone-300 text-sm hover:bg-surface-muted disabled:opacity-50"
+              >
+                {fflUploadMutation.isPending ? 'Uploading...' : g.fflFileUrl ? 'Replace FFL (PDF)' : 'Upload FFL (PDF)'}
+              </button>
+            </div>
+          )}
+
+          <div>
+            <h3 className="text-sm font-semibold text-stone-300 mb-2">Photos</h3>
+            <input
+              ref={photosUploadRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = e.target.files
+                if (files?.length) photosUploadMutation.mutate(Array.from(files))
+                e.target.value = ''
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => photosUploadRef.current?.click()}
+              disabled={photosUploadMutation.isPending}
+              className="mb-3 px-3 py-1.5 rounded border border-stone-600 text-stone-300 text-sm hover:bg-surface-muted disabled:opacity-50"
+            >
+              {photosUploadMutation.isPending ? 'Uploading...' : 'Add photos'}
+            </button>
+            {(g.photos?.length > 0) && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {g.photos.map((url) => (
+                  <div key={url} className="relative group">
+                    <img src={url} alt="" className="w-20 h-20 object-cover rounded border border-stone-600" />
+                    <button
+                      type="button"
+                      onClick={() => photoRemoveMutation.mutate(url)}
+                      disabled={photoRemoveMutation.isPending}
+                      className="absolute inset-0 flex items-center justify-center rounded bg-black/60 opacity-0 group-hover:opacity-100 text-red-400 text-sm hover:text-red-300 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -312,6 +312,14 @@ const gunsmiths = [
   },
 ]
 
+const nfaSubmissions = [
+  { formType: 'EFORM_4', itemType: 'SUPPRESSOR', submittedDate: new Date('2024-06-01'), approvedDate: new Date('2024-10-15'), status: 'APPROVED', trustOrIndividual: 'TRUST' },
+  { formType: 'EFORM_4', itemType: 'SUPPRESSOR', submittedDate: new Date('2024-07-10'), approvedDate: new Date('2024-11-20'), status: 'APPROVED', trustOrIndividual: 'INDIVIDUAL' },
+  { formType: 'EFORM_4', itemType: 'SBR', submittedDate: new Date('2024-08-01'), approvedDate: null, status: 'PENDING', trustOrIndividual: 'TRUST' },
+  { formType: 'FORM_4', itemType: 'SUPPRESSOR', submittedDate: new Date('2024-03-01'), approvedDate: new Date('2024-09-12'), status: 'APPROVED', trustOrIndividual: 'TRUST' },
+  { formType: 'EFORM_4', itemType: 'SUPPRESSOR', submittedDate: new Date('2024-05-15'), approvedDate: new Date('2024-10-01'), status: 'APPROVED', trustOrIndividual: 'TRUST' },
+]
+
 async function main() {
   console.log('Seeding ranges...')
   for (const r of ranges) {
@@ -332,6 +340,25 @@ async function main() {
     })
   }
   console.log(`Seeded ${gunsmiths.length} gunsmiths`)
+
+  const demoUser = await prisma.user.upsert({
+    where: { clerkId: 'seed-nfa-demo' },
+    create: {
+      clerkId: 'seed-nfa-demo',
+      email: 'seed-nfa-demo@tacticalshack.local',
+      name: 'NFA Demo',
+      role: 'USER',
+    },
+    update: {},
+  })
+  await prisma.nfaSubmission.deleteMany({ where: { userId: demoUser.id } })
+  console.log('Seeding NFA submissions (demo)...')
+  for (const n of nfaSubmissions) {
+    await prisma.nfaSubmission.create({
+      data: { userId: demoUser.id, ...n },
+    })
+  }
+  console.log(`Seeded ${nfaSubmissions.length} NFA submissions`)
 }
 
 main()
