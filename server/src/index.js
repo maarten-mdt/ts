@@ -8,6 +8,8 @@ import { clerkMiddleware } from '@clerk/express'
 import { rangesRouter } from './routes/ranges.js'
 import { claimsRouter } from './routes/claims.js'
 import { reviewsRouter } from './routes/reviews.js'
+import { gunsmithsRouter } from './routes/gunsmiths.js'
+import { gunsmithClaimsRouter } from './routes/gunsmith-claims.js'
 import { adminRouter } from './routes/admin.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -27,6 +29,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api/ranges', rangesRouter)
 app.use('/api/claims', claimsRouter)
 app.use('/api/reviews', reviewsRouter)
+app.use('/api/gunsmiths', gunsmithsRouter)
+app.use('/api/gunsmith-claims', gunsmithClaimsRouter)
 app.use('/api/admin', adminRouter)
 
 // Serve built frontend (when deployed with client built)

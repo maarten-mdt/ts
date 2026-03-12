@@ -26,6 +26,9 @@ model User {
   reviews       Review[]
   apiKeys       ApiKey[]
   savedRanges   SavedRange[]
+  ownedGunsmiths   Gunsmith[]     @relation("GunsmithOwner")
+  gunsmithClaims   GunsmithClaim[]
+  savedGunsmiths   SavedGunsmith[]
 }
 
 enum Role {
@@ -180,20 +183,185 @@ enum ClaimStatus {
 // ─── REVIEWS ──────────────────────────────────────────────────
 
 model Review {
-  id          String   @id @default(cuid())
-  rangeId     String
-  range       Range    @relation(fields: [rangeId], references: [id])
+  id          String    @id @default(cuid())
+  rangeId     String?
+  range       Range?    @relation(fields: [rangeId], references: [id])
+  gunsmithId  String?
+  gunsmith    Gunsmith? @relation(fields: [gunsmithId], references: [id])
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
   rating      Int
   body        String
   visitDate   DateTime?
-  helpful     Int      @default(0)
-  flagged     Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  helpful     Int       @default(0)
+  flagged     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([rangeId, userId])
+  @@unique([gunsmithId, userId])
+}
+
+// ─── GUNSMITHS ────────────────────────────────────────────────
+
+model Gunsmith {
+  id                    String          @id @default(cuid())
+  slug                  String          @unique
+  name                  String
+  shopName              String?
+  status                GunsmithStatus  @default(PENDING)
+
+  ownerId               String?
+  owner                 User?           @relation("GunsmithOwner", fields: [ownerId], references: [id])
+  claimed               Boolean         @default(false)
+  claimedAt             DateTime?
+
+  address               String
+  city                  String
+  state                 String
+  zip                   String
+  country               String          @default("US")
+  lat                   Float
+  lng                   Float
+
+  acceptsMailIn         Boolean         @default(false)
+  mailInOnly            Boolean         @default(false)
+  serviceRadiusMiles    Int?
+
+  hasFfl                Boolean         @default(false)
+  fflNumber             String?
+  fflExpiry             DateTime?
+  fflVerified           Boolean         @default(false)
+  fflVerifiedAt         DateTime?
+  fflLicenseType        FflLicenseType?
+  fflFileUrl            String?
+  fflAutoDownload       Boolean         @default(false)
+
+  primaryFocus          GunsmithFocus   @default(GENERAL)
+  specialties           String[]
+  platformsServiced     String[]
+  calibersServiced      String[]
+
+  avgTurnaroundWeeks    Int?
+  turnaroundNotes       String?
+  rushJobsAvailable     Boolean         @default(false)
+
+  showsPricing          Boolean         @default(false)
+  laborRatePerHour      Decimal?        @db.Decimal(8, 2)
+  pricingNotes          String?
+
+  credentials           String[]
+  yearsExperience       Int?
+  insuranceCarried      Boolean         @default(false)
+
+  website               String?
+  phone                 String?
+  email                 String?
+  bookingUrl            String?
+
+  googlePlaceId         String?         @unique
+  googleRating          Float?
+  googleReviewCount     Int?
+  googleRatingUpdated   DateTime?
+
+  photos                String[]
+  heroPhoto             String?
+
+  bio                   String?
+  adminNotes            String?
+
+  verified              Boolean         @default(false)
+  featured              Boolean         @default(false)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  claims                GunsmithClaim[]
+  reviews               Review[]
+  savedBy               SavedGunsmith[]
+}
+
+enum GunsmithStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum GunsmithFocus {
+  RIFLE
+  HANDGUN
+  GENERAL
+  SHOTGUN
+  NFA
+}
+
+enum FflLicenseType {
+  TYPE_01
+  TYPE_02
+  TYPE_06
+  TYPE_07
+  TYPE_08
+  TYPE_09
+  TYPE_10
+  TYPE_11
+  SOT_02
+  SOT_03
+}
+
+// ─── GUNSMITH CLAIMS ──────────────────────────────────────────
+
+model GunsmithClaim {
+  id                String        @id @default(cuid())
+  gunsmithId        String
+  gunsmith          Gunsmith      @relation(fields: [gunsmithId], references: [id])
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  status            ClaimStatus   @default(PENDING)
+
+  claimantName      String
+  claimantTitle     String
+  claimantPhone     String
+  claimantEmail     String
+  fflNumber         String?
+  verificationNote  String?
+  adminNote         String?
+  reviewedAt        DateTime?
+  createdAt         DateTime      @default(now())
+}
+
+// ─── SAVED GUNSMITHS ──────────────────────────────────────────
+
+model SavedGunsmith {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  gunsmithId  String
+  gunsmith    Gunsmith  @relation(fields: [gunsmithId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, gunsmithId])
+}
+
+// ─── FFL CACHE (ATF verification) ──────────────────────────────
+
+model FflCache {
+  id             String   @id @default(cuid())
+  fflNumber      String   @unique
+  businessName  String
+  premisesCity  String
+  premisesState String
+  licenseType   String
+  expiryDate    DateTime
+  rawRecord     String
+  lastSynced    DateTime @default(now())
+}
+
+model FflSyncLog {
+  id          String    @id @default(cuid())
+  syncedAt    DateTime  @default(now())
+  recordCount Int
+  success     Boolean
+  errorNote   String?
 }
 
 // ─── SAVED RANGES ─────────────────────────────────────────────

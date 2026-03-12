@@ -39,11 +39,56 @@ export async function sendClaimApprovedEmail(claim) {
 
 export async function sendClaimSubmittedToAdmin(claim) {
   if (!ADMIN_EMAIL) return
-  const { user, range } = claim
+  const { range } = claim
   const subject = `New claim for ${range.name}`
   const html = `
     <h2>New Range Claim</h2>
     <p><strong>Range:</strong> ${range.name}</p>
+    <p><strong>Claimant:</strong> ${claim.claimantName} (${claim.claimantEmail})</p>
+    <p><strong>Title:</strong> ${claim.claimantTitle}</p>
+    <p>Review and process at the admin dashboard.</p>
+  `
+  await send(EMAIL_FROM, ADMIN_EMAIL, subject, html)
+}
+
+export async function sendGunsmithClaimApprovedEmail(claim) {
+  if (!RESEND_API_KEY) return
+  const { user, gunsmith } = claim
+  const to = user?.email ?? claim.claimantEmail
+  const name = gunsmith.shopName ?? gunsmith.name
+  const subject = `Your claim for ${name} has been approved`
+  const html = `
+    <h2>Gunsmith Claim Approved</h2>
+    <p>Your claim for <strong>${name}</strong> has been approved.</p>
+    <p>You can now manage this listing at TacticalShack.</p>
+    <p>— TacticalShack</p>
+  `
+  await send(EMAIL_FROM, to, subject, html)
+}
+
+export async function sendFflRequestNotification(gunsmith, requester) {
+  if (!RESEND_API_KEY) return
+  const to = gunsmith.email
+  if (!to) return
+  const name = gunsmith.shopName ?? gunsmith.name
+  const subject = `FFL document requested for ${name}`
+  const html = `
+    <h2>FFL Document Request</h2>
+    <p>${requester.name ?? requester.email} has requested your FFL document for shipping purposes.</p>
+    <p>You can email them your FFL directly, or enable public FFL download in your TacticalShack dashboard.</p>
+    <p>— TacticalShack</p>
+  `
+  await send(EMAIL_FROM, to, subject, html)
+}
+
+export async function sendGunsmithClaimSubmittedToAdmin(claim) {
+  if (!ADMIN_EMAIL) return
+  const { gunsmith } = claim
+  const name = gunsmith.shopName ?? gunsmith.name
+  const subject = `New gunsmith claim for ${name}`
+  const html = `
+    <h2>New Gunsmith Claim</h2>
+    <p><strong>Gunsmith:</strong> ${name}</p>
     <p><strong>Claimant:</strong> ${claim.claimantName} (${claim.claimantEmail})</p>
     <p><strong>Title:</strong> ${claim.claimantTitle}</p>
     <p>Review and process at the admin dashboard.</p>

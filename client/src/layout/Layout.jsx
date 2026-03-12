@@ -11,6 +11,7 @@ const navItems = [
   { to: '/nfa-tracker', label: 'NFA Tracker' },
   { to: '/compatibility', label: 'Parts Compatibility' },
   { to: '/matches', label: 'Matches & Events', comingSoon: true },
+  ...(hasClerk ? [{ to: '/dashboard/gunsmiths', label: 'Dashboard' }] : []),
 ]
 
 export default function Layout() {

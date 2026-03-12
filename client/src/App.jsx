@@ -6,6 +6,9 @@ import RangeDetail from './pages/RangeDetail'
 import RangeClaimForm from './pages/RangeClaimForm'
 import Gunsmiths from './pages/Gunsmiths'
 import GunsmithDetail from './pages/GunsmithDetail'
+import GunsmithClaimForm from './pages/GunsmithClaimForm'
+import GunsmithDashboard from './pages/GunsmithDashboard'
+import GunsmithEdit from './pages/GunsmithEdit'
 import NFATracker from './pages/NFATracker'
 import Compatibility from './pages/Compatibility'
 import Matches from './pages/Matches'
@@ -25,6 +28,9 @@ export default function App() {
         <Route path="ranges/:slug/claim" element={<RangeClaimForm />} />
         <Route path="gunsmiths" element={<Gunsmiths />} />
         <Route path="gunsmiths/:slug" element={<GunsmithDetail />} />
+        <Route path="gunsmiths/:slug/claim" element={<GunsmithClaimForm />} />
+        <Route path="dashboard/gunsmiths" element={<GunsmithDashboard />} />
+        <Route path="dashboard/gunsmiths/:id/edit" element={<GunsmithEdit />} />
         <Route path="nfa-tracker" element={<NFATracker />} />
         <Route path="compatibility" element={<Compatibility />} />
         <Route path="matches" element={<Matches />} />
